@@ -10,76 +10,131 @@
             outline: none;
         }
 
-        /*html {*/
-        /*    -ms-overflow-style: none;*/
-        /*    !*火狐下隐藏滚动条*!*/
-        /*    overflow: -moz-scrollbars-none;*/
-        /*}*/
+        html {
+            -ms-overflow-style: none;
+            overflow: -moz-scrollbars-none;
+        }
 
-        /*::-webkit-scrollbar {*/
-        /*    display: none;*/
-        /*}*/
+        ::-webkit-scrollbar {
+            display: none;
+        }
 
         body {
             background-color: #444;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            text-align: center;
         }
 
         #gridContainer {
-            padding-bottom: 10px;
+            margin: 0 auto;
         }
 
         table {
-            background-color: #C5D6C6;
             border-spacing: 0;
         }
 
         td {
-            border: 1px solid #F1F5DA;
-            border-radius: 3px;
+            border: 1px solid #444444;
+            background-color: #222222;
             width: 10px;
             height: 10px;
         }
 
-        span {
-            color: #222;
+        .controls {
+            top: 0;
+            width: 100%;
+            position: fixed;
+            z-index: 99;
         }
 
-        #start,
-        #clear,
-        #random {
+        #home, #start,
+        #clear, #random {
             padding: .75em;
             border-radius: 5px;
             border: none;
-            background: linear-gradient(
-                    to bottom right,
-                    #C5DEC6, #587559);
+            margin: 0 5px;
         }
 
-        td.dead {
-            background-color: transparent;
+        button {
+            -webkit-transition-duration: 0.4s;
+            transition-duration: 0.4s;
+            background-color: #c8c8c8;
+            box-shadow: 0 12px 16px 0 rgba(0, 0, 0, 0.24), 0 17px 50px 0 rgba(0, 0, 0, 0.19);
+        }
+
+        #home {
+            background-color: #cb2525;
+            color: #c8c8c8;
+        }
+
+        #home:hover {
+            background-color: #4CAF50;
+        }
+
+        button:hover {
+            background-color: #4CAF50;
+            color: #c8c8c8;
         }
 
         td.live {
-            background-color: #CC4774;
-            border-radius: 10px;
+            background-color: #c8c8c8;
+            border-radius: 2px;
+        }
+
+        #mask {
+            position: fixed;
+            width: 100%;
+            height: 100vh;
+            z-index: 101;
+            animation-duration: 0.7s;
+        }
+
+        #mask div {
+            font-size: 50px;
+            font-weight: 700;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #4CAF50;
         }
     </style>
 </head>
 <body>
-
-<div id="gridContainer">
-
+<div id="mask" class="">
+    <div>404<br>Not Find!</div>
 </div>
+<div id="gridContainer"></div>
 
 <div class="controls">
-    <button id="start"><span>Start</span></button>
-    <button id="clear"><span>Clear</span></button>
-    <button id="random"><span>Random</span></button>
+    <a href="https://vinf.top/">
+        <button id="home">Home</button>
+    </a>
+    <button id="start" onclick="startButtonHandler(this)">Start</button>
+    <button id="clear" onclick="clearButtonHandler()">Clear</button>
+    <button id="random" onclick="randomButtonHandler()">Random</button>
 </div>
 
 <script>
-    let rows = 50;
-    let cols = 100;
+    const gunStr =
+        "........................O\n" +
+        "......................O.O\n" +
+        "............OO......OO............OO\n" +
+        "...........O...O....OO............OO\n" +
+        "OO........O.....O...OO\n" +
+        "OO........O...O.OO....O.O\n" +
+        "..........O.....O.......O\n" +
+        "...........O...O\n" +
+        "............OO";
+    const width = document.body.clientWidth;
+    const height = document.body.clientHeight;
+    const cellSize = 12;
+    console.log(width, height);
+    let cols = Math.floor(width * 0.9 / cellSize);
+    let rows = Math.floor(height * 0.9 / cellSize);
+    console.log(cols, rows);
 
     let playing = false;
 
@@ -87,7 +142,7 @@
     let nextGrid = new Array(rows);
 
     let timer;
-    let reproductionTime = 200;
+    let reproductionTime = 60;
 
     function initializeGrids() {
         for (let i = 0; i < rows; i++) {
@@ -116,27 +171,51 @@
 
     // Initialize
     function initialize() {
+        showNotFond()
         createTable();
         initializeGrids();
         resetGrids();
-        setupControlButtons();
+        for (let k = 1; k * 37 < cols; k++) {
+            readStr(gunStr, (k - 1) * 38, 0);
+        }
+        startButtonHandler(document.getElementById("start"));
+    }
+
+    function showNotFond() {
+        let mask = document.getElementById("mask");
+        setTimeout(function () {
+            mask.style.display = "none";
+        }, 5000);
+    }
+
+    function readStr(str, positionX, positionY) {
+        let x = 0, y = 0;
+        for (let ch of str) {
+            if (ch === "O") {
+                let tX = positionX + x, tY = positionY + y;
+                document.getElementById(tY + "_" + tX).setAttribute("class", "live");
+                grid[tY][tX] = 1;
+                x++;
+            } else if (ch === "\n") {
+                x = 0;
+                y++;
+            } else {
+                x++;
+            }
+        }
     }
 
     // Lay out the board
     function createTable() {
         let gridContainer = document.getElementById('gridContainer');
-        if (!gridContainer) {
-            // Throw error
-            console.error("Problem: No div for the drid table!");
-        }
         let table = document.createElement("table");
 
         for (let i = 0; i < rows; i++) {
             let tr = document.createElement("tr");
-            for (let j = 0; j < cols; j++) {//
+            for (let j = 0; j < cols; j++) {
                 let cell = document.createElement("td");
                 cell.setAttribute("id", i + "_" + j);
-                cell.setAttribute("class", "dead");
+                cell.setAttribute("class", "");
                 cell.onclick = cellClickHandler;
                 tr.appendChild(cell);
             }
@@ -146,13 +225,13 @@
     }
 
     function cellClickHandler() {
-        let rowcol = this.id.split("_");
-        let row = rowcol[0];
-        let col = rowcol[1];
+        let rowCol = this.id.split("_");
+        let row = rowCol[0];
+        let col = rowCol[1];
 
         let classes = this.getAttribute("class");
         if (classes.indexOf("live") > -1) {
-            this.setAttribute("class", "dead");
+            this.setAttribute("class", "");
             grid[row][col] = 0;
         } else {
             this.setAttribute("class", "live");
@@ -166,7 +245,7 @@
             for (let j = 0; j < cols; j++) {
                 let cell = document.getElementById(i + "_" + j);
                 if (grid[i][j] === 0) {
-                    cell.setAttribute("class", "dead");
+                    cell.setAttribute("class", "");
                 } else {
                     cell.setAttribute("class", "live");
                 }
@@ -174,30 +253,18 @@
         }
     }
 
-    function setupControlButtons() {
-        // button to start
-        let startButton = document.getElementById('start');
-        startButton.onclick = startButtonHandler;
-
-        // button to clear
-        let clearButton = document.getElementById('clear');
-        clearButton.onclick = clearButtonHandler;
-
-        // button to set random initial state
-        let randomButton = document.getElementById("random");
-        randomButton.onclick = randomButtonHandler;
-    }
 
     function randomButtonHandler() {
-        if (playing) return;
-        clearButtonHandler();
         for (let i = 0; i < rows; i++) {
             for (let j = 0; j < cols; j++) {
-                let isLive = Math.round(Math.random());
+                let isLive = Math.floor(Math.random() + 0.18);
+                let cell = document.getElementById(i + "_" + j);
                 if (isLive === 1) {
-                    let cell = document.getElementById(i + "_" + j);
                     cell.setAttribute("class", "live");
                     grid[i][j] = 1;
+                } else {
+                    cell.setAttribute("class", "");
+                    grid[i][j] = 0;
                 }
             }
         }
@@ -214,30 +281,28 @@
         clearTimeout(timer);
 
         const cellsList = document.getElementsByClassName("live");
-        // convert to array first, otherwise, you're working on a live node list
-        // and the update doesn't work!
         const cells = [];
         for (i = 0; i < cellsList.length; i++) {
             cells.push(cellsList[i]);
         }
 
         for (i = 0; i < cells.length; i++) {
-            cells[i].setAttribute("class", "dead");
+            cells[i].setAttribute("class", "");
         }
         resetGrids();
     }
 
     // start/pause/continue the game
-    function startButtonHandler() {
+    function startButtonHandler(button) {
         if (playing) {
             console.log("Pause the game");
             playing = false;
-            this.innerText = "Continue";
+            button.innerText = "Continue";
             clearTimeout(timer);
         } else {
             console.log("Continue the game");
             playing = true;
-            this.innerHTML = "Pause";
+            button.innerText = "Pause";
             play();
         }
     }
@@ -315,10 +380,7 @@
         }
         return count;
     }
-
-    // Start everything
     window.onload = initialize;
-    console.log(document.body.clientWidth)
 </script>
 
 </body>
